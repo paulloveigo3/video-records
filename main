@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+  <title>影片觀看紀錄</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+      margin: 0;
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
+
+    .container {
+      position: relative;
+      max-width: 800px;
+      margin: 0 auto;
+      background-color: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+      align-items: start;
+    }
+
+    h1 {
+      grid-column: 1 / -1;
+      text-align: center;
+      color: #333;
+    }
+
+    .form-group {
+      margin-bottom: 0px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      color: #666;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+
+    button {
+      background-color: #4CAF50;
+      color: white;
+      padding: 10px 15px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      width: 100%;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    .records {
+      margin-top: 0;
+      position: sticky;
+      top: 20px;
+      height: calc(100vh - 100px);
+      overflow-y: auto;
+    }
+
+    #animeForm {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .anime-card {
+      background-color: #f9f9f9;
+      padding: 15px;
+      margin-bottom: 10px;
+      border-radius: 4px;
+      border-left: 4px solid #4CAF50;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .anime-card.editing {
+      border-left-color: #ffc107;
+      animation: pulse-border 1.5s infinite;
+    }
+
+    @keyframes pulse-border {
+      0% { border-left-color: #ffc107; }
+      50% { border-left-color: #ffdb70; }
+      100% { border-left-color: #ffc107; }
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .expand-icon {
+      transform: rotate(0deg);
+      transition: transform 0.3s ease;
+    }
+
+    .anime-card.expanded .expand-icon {
+      transform: rotate(180deg);
+    }
+
+    .card-content {
+      max-height: 0;
+      opacity: 0;
+      overflow: hidden;
+      transition: all 0.3s ease;
+      padding-left: 10px;
+      border-left: 2px solid #eee;
+      margin-left: 10px;
+    }
+
+    .anime-card.expanded .card-content {
+      max-height: 500px;
+      opacity: 1;
+      margin-top: 10px;
+    }
+
+    .anime-card h3 {
+      margin: 0;
+      color: #333;
+    }
+
+    .card-actions {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 15px;
+    }
+
+    .edit-btn {
+      background-color: #777777;
+      margin-right: auto;
+    }
+
+    .edit-btn:hover {
+      background-color: #5a5a5a;
+    }
+
+    .delete-btn {
+      background-color: #ff4444;
+    }
+
+    .delete-btn:hover {
+      background-color: #cc0000;
+    }
+
+    .anime-card button {
+      margin-top: 10px;
+      width: auto;
+      padding: 8px 12px;
+    }
+
+    .anime-card a {
+      color: #4CAF50;
+      text-decoration: none;
+    }
+
+    .anime-card a:hover {
+      text-decoration: underline;
+    }
+
+    .anime-card p {
+      margin: 5px 0;
+      color: #666;
+    }
+
+    .editing-indicator {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      background: #ffc107;
+      color: white;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.8em;
+    }
+
+    #settingsBtn {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 8px;
+      border-radius: 50%;
+      transition: background 0.2s;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #settingsBtn:hover {
+      background: rgba(0,0,0,0.1);
+    }
+
+    #settingsBtn svg {
+      width: 24px;
+      height: 24px;
+      color: #666;
+    }
+
+    #searchBtn {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 8px;
+      border-radius: 50%;
+      transition: background 0.2s;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #searchBtn:hover {
+      background: rgba(0,0,0,0.1);
+    }
+
+    #searchBtn svg {
+      width: 24px;
+      height: 24px;
+      color: #666;
+    }
+
+    /* 設定對話框樣式 */
+    dialog[open] {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      border: none;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    }
+
+    dialog::backdrop {
+      background: rgba(0,0,0,0.3);
+    }
+
+    .dialog-actions {
+      margin-top: 20px;
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+
+    .search-wrapper {
+      position: relative;
+      display: inline-block;
+    }
+
+    #searchContainer {
+      position: absolute;
+      top: 50%;
+      right: 100%;
+      transform: translateY(-50%);
+      background: #fff;
+      box-shadow: 0 0 5px rgba(0,0,0,0.3);
+      padding: 8px;
+      display: block;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      opacity: 0;            
+      pointer-events: none;  
+    }
+
+    #searchContainer input {
+      width: 120px; 
+    }
+
+    #searchContainer.active {
+      transform: translateY(-50%) translateX(-20px);
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* 如果想最簡單 => .hidden { display: none; } + JS toggle .hidden 即可 */
+    .hidden:not(.active) {
+      display: none; 
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- 設定按鈕 -->
+    <button id="settingsBtn" aria-label="設定">
+      <svg width="24" height="24" viewBox="0 0 24 24">
+        <path fill="currentColor" d="M12 15.5A3.5 3.5 0 0 1 8.5 12A3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5a3.5 3.5 0 0 1-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97c0-.33-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.31-.61-.22l-2.49 1c-.52-.39-1.06-.73-1.69-.98l-.37-2.65A.488.488 0 0 0 14 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.22-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1c0 .33.03.65.07.97l-2.11 1.66c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1.01c.52.4 1.06.74 1.69.99l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.26 1.17-.59 1.69-.99l2.49 1.01c.22.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64L19.43 13Z"/>
+      </svg>
+    </button>
+
+    <!-- 搜尋按鈕 -->
+    <button id="searchBtn" aria-label="搜尋">
+      <svg width="24" height="24" viewBox="0 0 24 24">
+        <path fill="currentColor" d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 0 0 1.48-5.34c-.47-2.78-2.79-5-5.59-5.34a6.505 6.505 0 0 0-7.27 7.27c.34 2.8 2.56 5.12 5.34 5.59a6.5 6.5 0 0 0 5.34-1.48l.27.28v.79l4.25 4.25c.41.41 1.08.41 1.49 0c.41-.41.41-1.08 0-1.49L15.5 14zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5S14 7.01 14 9.5S11.99 14 9.5 14z"/>
+      </svg>
+      <div id="searchContainer" class="hidden">
+        <input type="text" id="searchInput" placeholder="輸入關鍵字進行搜尋...">
+      </div>
+    </button>
+
+    <h1>影片觀看紀錄</h1>
+    
+    <!-- 資料新增表單 -->
+    <form id="animeForm">
+      <div class="form-group">
+        <label for="country">國家:</label>
+        <select id="country">
+          <option value="其他">其他</option>
+          <option value="日本">日本</option>
+          <option value="中國">中國</option>
+          <option value="韓國">韓國</option>
+          <option value="美國">美國</option>
+          <option value="歐美">歐美</option>
+          <option value="香港">香港</option>
+          <option value="泰國">泰國</option>
+          <option value="英國">英國</option>
+          <option value="法國">法國</option>
+          <option value="新加坡">新加坡</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="title">影片名稱:</label>
+        <input type="text" id="title">
+      </div>
+
+      <div class="form-group">
+        <label for="category">類別:</label>
+        <select id="category">
+          <option value="其他">其他</option>
+          <option value="動畫">動畫</option>
+          <option value="電視劇">電視劇</option>
+          <option value="電影">電影</option>
+          <option value="綜藝">綜藝</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="lastWatched">最後觀看時間:</label>
+        <input type="date" id="lastWatched">
+      </div>
+
+      <div class="form-group">
+        <label for="timestamp">時間戳:</label>
+        <input type="text" id="timestamp" placeholder="例如: 13:45">
+      </div>
+
+      <div class="form-group">
+        <label for="episodes">集數:</label>
+        <input type="number" id="episodes" min="0">
+      </div>
+
+      <div class="form-group">
+        <label for="url">觀看網址:</label>
+        <input type="text" id="url">
+      </div>
+
+      <button type="submit">添加記錄</button>
+    </form>
+
+    <div class="records">
+      <h2>觀看記錄</h2>
+      <div id="animeRecords"></div>
+    </div>
+
+    <!-- 設定對話框 -->
+    <dialog id="settingsDialog">
+      <h3>設定選項</h3>
+
+      <!-- 默認國家 -->
+      <div class="form-group">
+        <label for="defaultCountry">默認國家:</label>
+        <select id="defaultCountry">
+          <option value="其他">其他</option>
+          <option value="日本">日本</option>
+          <option value="中國">中國</option>
+          <option value="韓國">韓國</option>
+          <option value="美國">美國</option>
+          <option value="歐美">歐美</option>
+          <option value="香港">香港</option>
+          <option value="泰國">泰國</option>
+          <option value="英國">英國</option>
+          <option value="法國">法國</option>
+          <option value="新加坡">新加坡</option>
+        </select>
+      </div>
+
+      <!-- 默認類別 -->
+      <div class="form-group">
+        <label for="defaultCategory">默認類別:</label>
+        <select id="defaultCategory">
+          <option value="其他">其他</option>
+          <option value="動畫">動畫</option>
+          <option value="電視劇">電視劇</option>
+          <option value="電影">電影</option>
+          <option value="綜藝">綜藝</option>
+        </select>
+      </div>
+
+      <!-- 是否自動填充當前時間 -->
+      <div class="form-group">
+        <label>
+          <input type="checkbox" id="useCurrentTime"> 使用當前時間作為默認值
+        </label>
+      </div>
+
+      <!-- 新增：輸入 Google Apps Script Web App (Excel Link) -->
+      <div class="form-group">
+        <label for="sheetUrl">Google Web App URL:</label>
+        <input type="text" id="sheetUrl" placeholder="https://script.google.com/macros/s/xxxx/exec">
+      </div>
+
+      <div class="dialog-actions">
+        <button id="cancelSettings" type="button">取消</button>
+        <button id="saveSettings" type="button" class="primary">保存</button>
+      </div>
+    </dialog>
+  </div>
+
+  <script>
+    // 直接在這裡宣告一個預設設定 (config) 物件
+    var config = {
+      defaultCountry: '日本',
+      defaultCategory: '電視劇',
+      useCurrentTime: true,
+      sheetUrl: ''  // 新增欄位: 預設空字串
+    };
+
+    // 從 localStorage 讀取已存儲的紀錄
+    let animeRecords = JSON.parse(localStorage.getItem('animeRecords')) || [];
+
+    const animeForm = document.getElementById('animeForm');
+    const recordsContainer = document.getElementById('animeRecords');
+
+    // 初始化設定
+    // 先將 config 的預設值展開，再把 localStorage 裡 (userConfig) 已存的覆蓋上去
+    let userConfig = {
+      ...config,
+      ...JSON.parse(localStorage.getItem('userConfig'))
+    };
+
+    // 取得設定對話框裡的 DOM
+    const settingsDialog = document.getElementById('settingsDialog');
+    const defaultCountrySelect = document.getElementById('defaultCountry');
+    const defaultCategorySelect = document.getElementById('defaultCategory');
+    const useCurrentTimeCheckbox = document.getElementById('useCurrentTime');
+    const sheetUrlInput = document.getElementById('sheetUrl');
+
+    // 搜尋相關 DOM
+    const searchBtn = document.getElementById('searchBtn');
+    const searchContainer = document.getElementById('searchContainer');
+    const searchInput = document.getElementById('searchInput');
+
+    // ==============
+    // 初始化表單默認值
+    // ==============
+    document.getElementById('country').value = userConfig.defaultCountry;
+    document.getElementById('category').value = userConfig.defaultCategory;
+    if (userConfig.useCurrentTime) {
+      document.getElementById('lastWatched').valueAsDate = new Date();
+    }
+
+    // ======================
+    // 顯示設定對話框按鈕事件
+    // ======================
+    document.getElementById('settingsBtn').addEventListener('click', () => {
+      // 打開對話框之前，先填入目前的 userConfig
+      defaultCountrySelect.value = userConfig.defaultCountry;
+      defaultCategorySelect.value = userConfig.defaultCategory;
+      useCurrentTimeCheckbox.checked = userConfig.useCurrentTime;
+      sheetUrlInput.value = userConfig.sheetUrl || '';
+      settingsDialog.showModal();
+    });
+
+    // ======================
+    // 設定對話框 - 保存
+    // ======================
+    document.getElementById('saveSettings').addEventListener('click', () => {
+      userConfig = {
+        defaultCountry: defaultCountrySelect.value,
+        defaultCategory: defaultCategorySelect.value,
+        useCurrentTime: useCurrentTimeCheckbox.checked,
+        sheetUrl: sheetUrlInput.value.trim()
+      };
+      // 存入 localStorage
+      localStorage.setItem('userConfig', JSON.stringify(userConfig));
+      settingsDialog.close();
+      
+      // 立即應用新設定
+      document.getElementById('country').value = userConfig.defaultCountry;
+      document.getElementById('category').value = userConfig.defaultCategory;
+      if (userConfig.useCurrentTime) {
+        document.getElementById('lastWatched').valueAsDate = new Date();
+      }
+    });
+
+    // ======================
+    // 設定對話框 - 取消
+    // ======================
+    document.getElementById('cancelSettings').addEventListener('click', () => {
+      settingsDialog.close();
+    });
+
+    // ======================
+    // 搜尋功能
+    // ======================
+    // 點擊搜尋按鈕 => 容器顯示或隱藏
+    searchBtn.addEventListener('click', () => {
+      searchContainer.classList.toggle('active');
+      if (searchContainer.classList.contains('active')) {
+        searchInput.focus();
+      }
+    });
+
+    // 輸入框 oninput => 呼叫篩選/反白
+    searchInput.addEventListener('input', () => {
+      const keyword = searchInput.value.trim();
+      filterAndHighlight(keyword);
+    });
+
+    function filterAndHighlight(keyword) {
+      if (!keyword) {
+        displayRecords(); // 重新渲染全部
+        return;
+      }
+      
+      animeRecords.forEach((record, index) => {
+        const titleText = record.title;
+        const card = recordsContainer.querySelectorAll('.anime-card')[index];
+        if (!card) return;
+        if (titleText.toLowerCase().includes(keyword.toLowerCase())) {
+          card.style.display = 'block';
+          highlightText(card.querySelector('h3'), titleText, keyword);
+        } else {
+          card.style.display = 'none';
+        }
+      });
+    }
+
+    // 文字反白函式
+    function highlightText(element, fullText, keyword) {
+      const index = fullText.toLowerCase().indexOf(keyword.toLowerCase());
+      if (index === -1) {
+        element.innerHTML = fullText;
+        return;
+      }
+      const beforeMatch = fullText.slice(0, index);
+      const matchText = fullText.slice(index, index + keyword.length);
+      const afterMatch = fullText.slice(index + keyword.length);
+
+      element.innerHTML = `
+        ${beforeMatch}
+        <span style="background-color: yellow;">${matchText}</span>
+        ${afterMatch}
+      `;
+    }
+
+    // ======================
+    // 顯示所有記錄
+    // ======================
+    function displayRecords() {
+      recordsContainer.innerHTML = '';
+      animeRecords.forEach((record, index) => {
+        const card = document.createElement('div');
+        card.className = 'anime-card';
+        card.innerHTML = `
+          <div class="card-header">
+            <h3>${record.title}</h3>
+            <svg class="expand-icon" width="24" height="24" viewBox="0 0 24 24">
+              <path fill="currentColor" d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/>
+            </svg>
+          </div>
+          ${
+            index === parseInt(animeForm.dataset.editingIndex)
+              ? '<div class="editing-indicator">編輯中</div>'
+              : ''
+          }
+          <div class="card-content">
+            <p>國家: ${record.country}</p>
+            <p>類別: ${record.category}</p>
+            <p>最後觀看: ${record.lastWatched}</p>
+            <p>時間戳: ${record.timestamp}</p>
+            <p>集數: ${record.episodes}</p>
+            <p>網址: <a href="${record.url}" target="_blank">${record.url}</a></p>
+            <div class="card-actions">
+              <button class="edit-btn" onclick="editRecord(${index})">編輯</button>
+              <button class="delete-btn" onclick="deleteRecord(${index})">刪除</button>
+            </div>
+          </div>
+        `;
+        
+        const header = card.querySelector('.card-header');
+        header.addEventListener('click', () => {
+          card.classList.toggle('expanded');
+        });
+        
+        recordsContainer.appendChild(card);
+      });
+    }
+
+    // ======================
+    // 表單送出(添加或更新紀錄)
+    // ======================
+    animeForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+
+      // 在表單提交處添加自動時間填充
+      if (userConfig.useCurrentTime && !document.getElementById('lastWatched').value) {
+        document.getElementById('lastWatched').valueAsDate = new Date();
+      }
+      
+      const newRecord = {
+        country: document.getElementById('country').value || '未指定',
+        title: document.getElementById('title').value || '未命名',
+        category: document.getElementById('category').value || '未分類',
+        lastWatched: document.getElementById('lastWatched').value || '未記錄',
+        timestamp: document.getElementById('timestamp').value || '未記錄',
+        episodes: document.getElementById('episodes').value || '未記錄',
+        url: document.getElementById('url').value || '#'
+      };
+
+      // 檢查是否是「編輯」模式
+      if (typeof animeForm.dataset.editingIndex !== 'undefined') {
+        const index = parseInt(animeForm.dataset.editingIndex);
+        animeRecords[index] = newRecord;
+        delete animeForm.dataset.editingIndex;
+      } else {
+        animeRecords.push(newRecord);
+      }
+
+      // 先同步到 localStorage
+      localStorage.setItem('animeRecords', JSON.stringify(animeRecords));
+
+      // ================
+      // (可選) 傳送到 Google 試算表 (Apps Script Web App)
+      // 如果在設定裡有填寫 sheetUrl，才去 fetch
+      // ================
+      if (userConfig.sheetUrl) {
+        fetch(userConfig.sheetUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newRecord),
+        })
+        .then(response => response.json())
+        .then(data => {
+          console.log('傳送到Google試算表的結果:', data);
+          if (data.status === 'success') {
+            alert("已成功寫入 Google 試算表！");
+          } else {
+            alert("寫入 Google 試算表失敗：" + data.message);
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          alert("寫入 Google 試算表發生錯誤：" + err);
+        });
+      }
+
+      // 重置表單(並帶回預設)
+      document.getElementById('title').value = '';
+      document.getElementById('timestamp').value = '';
+      document.getElementById('episodes').value = '';
+      document.getElementById('url').value = '';
+      document.getElementById('country').value = userConfig.defaultCountry;
+      document.getElementById('category').value = userConfig.defaultCategory;
+      if (userConfig.useCurrentTime) {
+        document.getElementById('lastWatched').valueAsDate = new Date();
+      } else {
+        document.getElementById('lastWatched').value = '';
+      }
+      animeForm.querySelector('button[type="submit"]').textContent = '添加記錄';
+
+      // 重新顯示紀錄
+      displayRecords();
+    });
+
+    // ======================
+    // 刪除紀錄
+    // ======================
+    window.deleteRecord = function(index) {
+      animeRecords.splice(index, 1);
+      localStorage.setItem('animeRecords', JSON.stringify(animeRecords));
+      displayRecords();
+    };
+
+    // ======================
+    // 編輯紀錄
+    // ======================
+    window.editRecord = function(index) {
+      const record = animeRecords[index];
+      document.getElementById('country').value = record.country;
+      document.getElementById('title').value = record.title;
+      document.getElementById('category').value = record.category;
+      document.getElementById('lastWatched').value = record.lastWatched;
+      document.getElementById('timestamp').value = record.timestamp;
+      document.getElementById('episodes').value = record.episodes;
+      document.getElementById('url').value = record.url;
+
+      animeForm.dataset.editingIndex = index;
+      animeForm.querySelector('button[type="submit"]').textContent = '更新記錄';
+    };
+
+    // ======================
+    // 頁面載入時，先顯示一次
+    // ======================
+    displayRecords();
+  </script>
+</body>
+</html>
